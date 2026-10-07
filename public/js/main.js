@@ -1,6 +1,7 @@
 // Entry point.
 import { App } from './app.js';
 
+
 function webglAvailable() {
   try {
     const c = document.createElement('canvas');
