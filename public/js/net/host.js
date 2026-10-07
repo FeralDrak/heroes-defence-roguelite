@@ -7,7 +7,7 @@ import { CLASSES, CLASS_LIST } from '../core/data/classes/index.js';
 import { DIFFICULTIES, DIFFICULTY_LIST } from '../core/data/difficulty.js';
 import { ARENAS, ARENA_LIST } from '../core/data/arenas.js';
 import { createTicker } from './clock.js';
-import { Transport } from './transport.js';
+import { createTransport } from './netmode.js';
 import { Tracker } from '../profile/profile.js';
 
 export class HostSession {
@@ -48,7 +48,7 @@ export class HostSession {
   // Connection
   // ---------------------------------------------------------------------------
   async openOnline() {
-    this.transport = new Transport();
+    this.transport = await createTransport('host');
     await this.transport.connect();
     this.transport.on('control', (m) => this.onControl(m));
     this.transport.on('binary', (b) => this.onBinary(b));
@@ -58,7 +58,7 @@ export class HostSession {
       for (const p of this.lobby.players) if (p.pid !== 0) p.connected = false;
       this.online = false;
     });
-    const p = this.transport.waitFor((m) => m.t === 'hosted');
+    const p = this.transport.waitFor((m) => m.t === 'hosted', 15000);
     this.transport.sendJson({ t: 'host', name: this.name });
     const msg = await p;
     this.code = msg.code;

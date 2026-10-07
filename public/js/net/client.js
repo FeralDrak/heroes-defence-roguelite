@@ -1,6 +1,6 @@
 // Client session: lobby + game view state for one player (remote, or the host's own player).
 import { decodeSnapshot, encodeInput, encodeJson, decodeJson, frameType, MSG } from '../core/net/protocol.js';
-import { Transport } from './transport.js';
+import { createTransport } from './netmode.js';
 import { ClientWorld } from '../game/world.js';
 
 function getToken() {
@@ -54,15 +54,17 @@ export class ClientSession {
   // Remote connection
   // ---------------------------------------------------------------------------
   async joinRemote(code, name) {
-    this.transport = new Transport();
-    await this.transport.connect();
-    this.transport.on('binary', (b) => this.onBinary(b));
-    this.transport.on('control', (m) => {
+    const transport = await createTransport('client');
+    this.transport = transport;
+    await transport.connect();
+    if (this.closed) { transport.close(); throw new Error('Connexion annulée.'); }
+    transport.on('binary', (b) => this.onBinary(b));
+    transport.on('control', (m) => {
       if (m.t === 'closed') this.onClosed(m.reason || 'La partie est terminée.');
     });
-    this.transport.on('close', () => this.onClosed('Connexion au serveur perdue.'));
-    const joined = this.transport.waitFor((m) => m.t === 'joined');
-    this.transport.sendJson({ t: 'join', code: String(code).toUpperCase(), name, token: this.token });
+    transport.on('close', () => this.onClosed(transport.lostMessage || 'Connexion perdue.'));
+    const joined = transport.waitFor((m) => m.t === 'joined', transport.joinTimeout || 8000);
+    transport.sendJson({ t: 'join', code: String(code).toUpperCase(), name, token: this.token });
     await joined;
     this.code = String(code).toUpperCase();
     await new Promise((resolve, reject) => {

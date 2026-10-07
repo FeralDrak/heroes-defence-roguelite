@@ -79,9 +79,38 @@ Le projet est un simple serveur Node (HTTP + WebSocket) : il se déploie tel que
 Fly.io, un VPS… (`npm install` puis `npm start`, port fourni par la variable `PORT`). Jouez alors depuis
 l'adresse du déploiement.
 
+### Option 5 — GitHub Pages : un lien permanent, gratuit, sans serveur à lancer
+
+Le dépôt contient un workflow ([.github/workflows/pages.yml](.github/workflows/pages.yml)) qui construit une
+**version statique** du jeu (`npm run build` → dossier `dist/`, avec Three.js et PeerJS inclus) et la publie
+à chaque `git push` sur `main`.
+
+1. Une seule fois, sur GitHub : **Settings → Pages → Build and deployment → Source : « GitHub Actions »**
+   (et non « Deploy from a branch »).
+2. Poussez votre code : l'onglet **Actions** montre la publication (1 à 2 minutes).
+3. Le jeu est en ligne sur **`https://<votre-pseudo>.github.io/<nom-du-dépôt>/`** (sans `/public`).
+
+Sur GitHub Pages, il n'y a pas de serveur de jeu : les navigateurs se connectent **directement entre eux**
+(WebRTC). Le service gratuit [PeerJS](https://peerjs.com) sert uniquement à les mettre en relation (et à
+relayer la connexion si un réseau bloque les connexions directes). Différences avec le serveur Node :
+
+- L'hôte crée la partie normalement et envoie le **lien d'invitation** (ou le code) ; il doit garder la page
+  ouverte pendant toute la partie, comme d'habitude.
+- La liste des « Parties ouvertes » n'existe pas : on rejoint avec le lien ou le code.
+- Si un ami n'arrive vraiment pas à se connecter (réseau d'entreprise très restrictif), utilisez
+  `npm run share` à la place.
+
+> 💡 **Vos profils ne suivent pas automatiquement** : ils sont enregistrés par adresse (localhost:3000 ≠
+> github.io). Pour garder votre progression, cliquez sur **Exporter** dans l'écran de choix du profil sur
+> `http://localhost:3000`, puis **Importer un profil…** sur le site GitHub Pages.
+
+Pour tester la version statique en local avant de pousser : `npm run build` puis `npm run preview`
+(→ `http://localhost:4173/heroes-defence-roguelite/`, servi exactement comme sur GitHub Pages).
+
 ### Déroulement d'une partie à plusieurs
 
-- Les amis ouvrent le lien (ou « Rejoindre une partie » + code à 4 caractères, ou la liste des parties ouvertes).
+- Les amis ouvrent le lien (ou « Rejoindre une partie » + code à 4 caractères, ou la liste des parties ouvertes
+  avec le serveur Node).
 - Chacun choisit son héros parmi les classes **débloquées sur le profil de l'hôte**, puis se met prêt.
 - L'hôte choisit la difficulté et l'arène, et lance la partie.
 - Un joueur déconnecté peut revenir (même onglet / rechargement de page) : il retrouve son héros.
@@ -154,6 +183,8 @@ l'adresse du déploiement.
 
 ```bash
 npm run share   # serveur + tunnel Cloudflare pour inviter des amis sur Internet
+npm run build   # version statique dans dist/ (GitHub Pages), multijoueur en WebRTC
+npm run preview # sert dist/ comme GitHub Pages : http://localhost:4173/heroes-defence-roguelite/
 npm run dev     # serveur avec rechargement automatique
 npm test        # cohérence du contenu (déverrouillages, talents, protocole réseau)
 npm run sim     # simulation sans affichage avec des bots : node tests/headless-sim.js [classe|all|mix] [vagueMax] [joueurs] [difficulté] [god]
@@ -165,11 +196,14 @@ Lancement rapide pour tester : `http://localhost:3000/?quick=solo&cls=mage` (der
 
 ```
 server/server.js        Serveur HTTP statique + relais WebSocket (salons, codes d'invitation)
+server/share.js         Serveur + tunnel Cloudflare (npm run share)
+scripts/                Construction de la version statique (GitHub Pages) et prévisualisation locale
 public/js/core/         Simulation partagée (aucune dépendance au DOM, testable dans Node)
   data/                 Classes, compétences, talents, objets, uniques, aspects, monstres, boss, succès…
   sim/                  Moteur : combat, IA des monstres/boss/invocations, vagues, butin, actions
   net/                  Protocole binaire des instantanés + états des joueurs
-public/js/net/          Session hôte (fait tourner la simulation à 30 Hz) et session client
+public/js/net/          Session hôte (fait tourner la simulation à 30 Hz) et session client ;
+                        transport WebSocket (serveur Node) ou WebRTC direct (p2p.js, version statique)
 public/js/game/         Monde côté client (interpolation), contrôleur (prédiction du déplacement)
 public/js/render/       Rendu Three.js (instanciation des monstres, effets, zones, overlay 2D)
 public/js/ui/           Menus, salon, HUD, inventaire, boutique, talents, succès

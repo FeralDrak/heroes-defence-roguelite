@@ -10,6 +10,7 @@ import { BUFFS } from '../public/js/core/data/buffs.js';
 import { Game } from '../public/js/core/sim/game.js';
 import { buildState, encodeSnapshot, decodeSnapshot, encodeInput, decodeInput } from '../public/js/core/net/protocol.js';
 import { generateItem } from '../public/js/core/items/itemgen.js';
+import { packFrame, Reassembler } from '../public/js/net/p2p.js';
 
 let failures = 0;
 const fail = (msg) => { failures++; console.error('✗ ' + msg); };
@@ -103,6 +104,29 @@ ok('recompute with all talents & buffs');
   const inp = decodeInput(ib);
   if (inp.x !== 1.5 || inp.held !== 5 || inp.fs !== 7 || !Number.isNaN(inp.tx)) fail('input round trip');
   ok(`protocol round trip (${buf.byteLength} bytes for ${st.units.length} units, ${st.projs.length} projectiles)`);
+}
+
+// ---- P2P framing: frames of any size survive the split into data channel messages ----
+{
+  const sizes = [2, 100, 15998, 15999, 16000, 16001, 32000, 50000, 123457];
+  const rx = new Reassembler();
+  let okCount = 0;
+  for (const n of sizes) {
+    const src = new Uint8Array(n);
+    for (let i = 0; i < n; i++) src[i] = (i * 31 + n) & 255;
+    const parts = packFrame(src);
+    if (parts.some((p) => p.byteLength > 16001)) fail(`p2p: message too large for ${n} bytes`);
+    let out = null;
+    parts.forEach((p, i) => {
+      const r = rx.push(p);
+      if (i < parts.length - 1 && r) fail(`p2p: early frame for ${n} bytes`);
+      if (i === parts.length - 1) out = r;
+    });
+    const u = out && new Uint8Array(out);
+    if (!u || u.length !== n || u.some((v, i) => v !== src[i])) fail(`p2p: frame of ${n} bytes corrupted`);
+    else okCount++;
+  }
+  if (okCount === sizes.length) ok('P2P frame split & reassembly');
 }
 
 // ---- fuzz: malformed / random player actions must never break the host simulation ----

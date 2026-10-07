@@ -12,6 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const THREE_DIR = path.join(ROOT, 'node_modules', 'three');
+const PEERJS_DIR = path.join(ROOT, 'node_modules', 'peerjs', 'dist');
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
@@ -36,6 +37,7 @@ const MIME = {
 const MOUNTS = [
   ['/vendor/three/', path.join(THREE_DIR, 'build')],
   ['/vendor/three-addons/', path.join(THREE_DIR, 'examples', 'jsm')],
+  ['/vendor/peerjs/', PEERJS_DIR],
   ['/', PUBLIC_DIR],
 ];
 

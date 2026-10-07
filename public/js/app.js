@@ -6,6 +6,7 @@ import { Input } from './game/input.js';
 import { Screens } from './ui/screens.js';
 import { HostSession } from './net/host.js';
 import { ClientSession } from './net/client.js';
+import { netMode } from './net/netmode.js';
 import { GameView } from './game/gameview.js';
 import { h } from './ui/dom.js';
 import { ACHIEVEMENTS_BY_ID } from './core/data/achievements.js';
@@ -76,10 +77,11 @@ export class App {
   }
 
   async fetchServerInfo() {
+    if ((await netMode()) !== 'server') return null; // static hosting: no game server
     try {
       const res = await fetch('api/info', { cache: 'no-store' });
       if (res.ok) this.serverInfo = await res.json();
-    } catch { /* static hosting: no info */ }
+    } catch { /* server unreachable */ }
     return this.serverInfo;
   }
 
@@ -92,15 +94,22 @@ export class App {
     try { if (v) sessionStorage.setItem('hdr.inviteBase', v); else sessionStorage.removeItem('hdr.inviteBase'); } catch { /* ignore */ }
   }
 
-  /** Base URL to put in invitation links (friends can't use "localhost") */
-  inviteBase() {
-    const manual = this.manualInviteBase();
-    if (manual) return manual.replace(/\/+$/, '');
-    const info = this.serverInfo || {};
-    if (info.publicUrl) return info.publicUrl.replace(/\/+$/, '');
-    const local = ['localhost', '127.0.0.1', '::1', '[::1]'].includes(location.hostname);
-    if (local && info.lanUrls && info.lanUrls.length) return info.lanUrls[0];
-    return location.origin;
+  /** Folder of the game page, e.g. https://user.github.io/heroes-defence-roguelite/ */
+  pageBase() {
+    return location.origin + location.pathname.replace(/[^/]*$/, '');
+  }
+
+  /** Invitation link for a game code (friends can't use "localhost") */
+  inviteLink(code) {
+    let base = this.manualInviteBase();
+    if (!base) {
+      const info = this.serverInfo || {};
+      const local = ['localhost', '127.0.0.1', '::1', '[::1]'].includes(location.hostname);
+      if (info.publicUrl) base = info.publicUrl;
+      else if (local && info.lanUrls && info.lanUrls.length) base = info.lanUrls[0];
+      else base = this.pageBase();
+    }
+    return base.replace(/\/*$/, '/') + '?join=' + code;
   }
 
   saveSettings() { saveSettings(this.settings); }
@@ -130,7 +139,8 @@ export class App {
         await host.openOnline();
         await this.fetchServerInfo();
       } catch (err) {
-        this.toast(`Impossible de créer le salon en ligne : ${err.message}. Le serveur de jeu est-il lancé (npm start) ?`, 'error');
+        const hint = (await netMode()) === 'server' ? ' Le serveur de jeu est-il lancé (npm start) ?' : '';
+        this.toast(`Impossible de créer le salon en ligne : ${err.message}${hint}`, 'error');
         this.disposeSession();
         return false;
       }

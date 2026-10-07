@@ -12,6 +12,7 @@ import { ASPECTS_LIST } from '../core/data/aspects.js';
 import { TALENT_LIST } from '../core/data/talents.js';
 import { DEFAULT_BINDINGS, BINDING_LABELS } from '../game/input.js';
 import { Transport } from '../net/transport.js';
+import { netMode } from '../net/netmode.js';
 
 const SLOT_KEYS = [null, null, 'skill1', 'skill2', 'ultimate', 'dash'];
 
@@ -126,7 +127,7 @@ export class Screens {
       app.saveSettings();
       app.store.setLast(prof.id);
       continueBtn.disabled = true;
-      continueBtn.textContent = mode === 'host' ? 'Connexion au serveur…' : 'Chargement…';
+      continueBtn.textContent = mode === 'host' ? 'Création du salon…' : 'Chargement…';
       const ok = await app.startLocal(prof, pseudo, mode === 'host');
       if (!ok) { continueBtn.disabled = false; continueBtn.textContent = mode === 'host' ? 'Créer le salon ➜' : 'Continuer ➜'; }
     };
@@ -177,6 +178,7 @@ export class Screens {
     const status = h('div.small');
     const rooms = h('div.room-list');
     const joinBtn = btn('Rejoindre ➜', () => join(codeInput.value), 'primary');
+    const refreshBtn = btn('↻ Actualiser', () => refresh(), 'small');
 
     const join = async (code) => {
       code = String(code || '').trim().toUpperCase();
@@ -199,6 +201,11 @@ export class Screens {
 
     const refresh = async () => {
       clear(rooms);
+      if ((await netMode()) === 'p2p') {
+        refreshBtn.classList.add('hidden');
+        rooms.appendChild(h('div.muted.small', { text: "Version en ligne : la liste des parties ouvertes n'est pas disponible. Utilisez le lien ou le code d'invitation donné par l'hôte." }));
+        return;
+      }
       rooms.appendChild(h('div.muted.small', { text: 'Recherche des parties ouvertes…' }));
       const t = new Transport();
       try {
@@ -231,7 +238,7 @@ export class Screens {
           h('div.row.wrap', {}, h('label', { text: 'Pseudo' }), nameInput),
           h('div.row.wrap', {}, h('label', { text: 'Code' }), codeInput, joinBtn),
           status,
-          h('div.row', {}, h('h3', { text: 'Parties ouvertes', style: { margin: 0 } }), h('div.spacer'), btn('↻ Actualiser', refresh, 'small')),
+          h('div.row', {}, h('h3', { text: 'Parties ouvertes', style: { margin: 0 } }), h('div.spacer'), refreshBtn),
           rooms)));
     this.mount(el, 'join');
     refresh();
@@ -283,10 +290,9 @@ export class Screens {
       }
       body.appendChild(plist);
       if (L.online && L.code) {
-        const base = isHost ? app.inviteBase() : location.origin;
-        const link = `${base}/?join=${L.code}`;
+        const link = isHost ? app.inviteLink(L.code) : `${app.pageBase()}?join=${L.code}`;
         const linkInput = h('input', { type: 'text', value: link, readonly: true });
-        const isLan = /^https?:\/\/(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(base);
+        const isLan = /^https?:\/\/(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(link);
         body.appendChild(h('div.invite', {},
           h('div.small.muted.center', { text: "Code d'invitation" }),
           h('div.code', { text: L.code }),

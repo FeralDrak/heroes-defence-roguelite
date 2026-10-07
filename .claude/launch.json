@@ -6,6 +6,12 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["server/server.js"],
       "port": 3000
+    },
+    {
+      "name": "pages-preview",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["scripts/preview-static.js"],
+      "port": 4173
     }
   ]
 }

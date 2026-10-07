@@ -1,21 +1,42 @@
-// WebSocket connection to the relay server.
-export class Transport {
-  constructor(url) {
-    this.url = url || Transport.defaultUrl();
-    this.ws = null;
+// Network channels. Every transport emits the relay server's messages:
+// 'control' (JSON objects such as hosted / joined / peer / peerLeft / closed / error),
+// 'binary' (game frames whose first byte is the address) and 'close'.
+export class Channel {
+  constructor() {
     this.handlers = { control: [], binary: [], close: [] };
     this.rtt = 0;
-    this.pingTimer = null;
     this.open = false;
+  }
+
+  on(type, fn) { this.handlers[type].push(fn); return () => { this.handlers[type] = this.handlers[type].filter((f) => f !== fn); }; }
+  emit(type, data) { for (const fn of this.handlers[type].slice()) fn(data); }
+
+  /** Wait for a control message matching a predicate */
+  waitFor(pred, timeoutMs = 8000) {
+    return new Promise((resolve, reject) => {
+      const off = this.on('control', (msg) => {
+        if (msg.t === 'error') { off(); clearTimeout(t); reject(new Error(msg.msg || 'Erreur')); return; }
+        if (pred(msg)) { off(); clearTimeout(t); resolve(msg); }
+      });
+      const t = setTimeout(() => { off(); reject(new Error(this.timeoutMessage || 'Pas de réponse du serveur')); }, timeoutMs);
+    });
+  }
+}
+
+/** WebSocket connection to the relay server (npm start) */
+export class Transport extends Channel {
+  constructor(url) {
+    super();
+    this.url = url || Transport.defaultUrl();
+    this.ws = null;
+    this.pingTimer = null;
+    this.lostMessage = 'Connexion au serveur perdue.';
   }
 
   static defaultUrl() {
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     return `${proto}//${location.host}/ws`;
   }
-
-  on(type, fn) { this.handlers[type].push(fn); return () => { this.handlers[type] = this.handlers[type].filter((f) => f !== fn); }; }
-  emit(type, data) { for (const fn of this.handlers[type].slice()) fn(data); }
 
   connect(timeoutMs = 8000) {
     return new Promise((resolve, reject) => {
@@ -69,17 +90,6 @@ export class Transport {
           this.emit('binary', e.data);
         }
       };
-    });
-  }
-
-  /** Wait for a control message matching a predicate */
-  waitFor(pred, timeoutMs = 8000) {
-    return new Promise((resolve, reject) => {
-      const off = this.on('control', (msg) => {
-        if (msg.t === 'error') { off(); clearTimeout(t); reject(new Error(msg.msg || 'Erreur')); return; }
-        if (pred(msg)) { off(); clearTimeout(t); resolve(msg); }
-      });
-      const t = setTimeout(() => { off(); reject(new Error('Pas de réponse du serveur')); }, timeoutMs);
     });
   }
 
