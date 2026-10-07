@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Heroes Defence — L'Arène des Damnés</title>
+  <meta name="description" content="Survie en arène 3D, roguelite, solo et coopération en ligne.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚔️</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three/three.module.js",
+        "three/addons/": "./vendor/three-addons/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="app">
+    <div id="game-layer"></div>
+    <div id="hud" class="hidden"></div>
+    <div id="screens"></div>
+    <div id="panels"></div>
+    <div id="center-msg"></div>
+    <div id="toasts"></div>
+    <div id="tooltip" class="tooltip hidden"></div>
+    <div id="ctxmenu" class="ctxmenu hidden"></div>
+    <div id="loading" class="loading">
+      <div class="loading-inner">
+        <div class="loading-title">Heroes Defence</div>
+        <div class="loading-sub">Chargement de l'arène…</div>
+      </div>
+    </div>
+  </div>
+  <noscript>Ce jeu nécessite JavaScript.</noscript>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

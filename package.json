@@ -1,0 +1,22 @@
+{
+  "name": "heroes-defence-roguelite",
+  "version": "1.0.0",
+  "description": "Heroes Defence - L'Arène des Damnés : survie en arène 3D, roguelite, solo et coopération en ligne.",
+  "type": "module",
+  "private": true,
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "share": "node server/share.js",
+    "dev": "node --watch server/server.js",
+    "test": "node tests/run-tests.js",
+    "sim": "node tests/headless-sim.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "three": "^0.169.0",
+    "ws": "^8.22.0"
+  }
+}
